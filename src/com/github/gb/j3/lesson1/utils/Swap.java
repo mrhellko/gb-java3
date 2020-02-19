@@ -1,4 +1,4 @@
-package com.github.gb.j3.lesson1.swap;
+package com.github.gb.j3.lesson1.utils;
 
 public class Swap {
     public static <T> void process(T[] arr, int a, int b) {
