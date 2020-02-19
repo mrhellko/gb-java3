@@ -1,6 +1,7 @@
 package com.github.gb.j3.lesson1.task;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Box<T extends Fruit> {
@@ -24,6 +25,10 @@ public class Box<T extends Fruit> {
 
     public void put(T fruit) {
         fruits.add(fruit);
+    }
+
+    public void put(T ...fruit) {
+        fruits.addAll(Arrays.asList(fruit));
     }
 
     public void putAll(Box<T> box) {
