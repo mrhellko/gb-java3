@@ -3,7 +3,7 @@ package com.github.gb.j3.lesson1.task;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Box <T extends Fruit> {
+public class Box<T extends Fruit> {
     private List<T> fruits;
 
     public Box() {
