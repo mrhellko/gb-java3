@@ -36,7 +36,7 @@ public class Box<T extends Fruit> {
         box.clear();
     }
 
-    public <E extends Fruit> boolean compare(Box<E> box) {
+    public boolean compare(Box<? extends Fruit> box) {
         return getWeight() == box.getWeight();
     }
 
