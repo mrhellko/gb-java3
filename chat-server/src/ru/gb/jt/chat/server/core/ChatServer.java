@@ -105,7 +105,7 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
     public synchronized void onSocketStop(SocketThread thread) {
         ClientThread client = (ClientThread) thread;
         clients.remove(thread);
-        if (client.isAuthorized() && !client.isReconnecting() ) {
+        if (client.isAuthorized() && !client.isReconnecting()) {
             sendToAuthClients(Library.getTypeBroadcast("Server",
                     client.getNickname() + " disconnected"));
         }
@@ -162,10 +162,22 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
                 sendToAuthClients(Library.getTypeBroadcast(
                         client.getNickname(), arr[1]));
                 break;
+            case Library.NICKNAME_CHANGE:
+                changeNickname(arr[1], client);
+                sendToAuthClients(Library.getUserList(getUsers()));
+                break;
             default:
                 client.sendMessage(Library.getMsgFormatError(msg));
         }
     }
+
+    private void changeNickname(String newNickname, ClientThread client) {
+        String oldNickname = client.getNickname();
+        int result = SqlClient.setNickname(newNickname, oldNickname);
+        if (result == 1) client.setNickname(newNickname);
+        //if (result == 0) throw exception to client
+    }
+
 // launch4j
     private void sendToAuthClients(String msg) {
         for (int i = 0; i < clients.size(); i++) {

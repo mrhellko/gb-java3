@@ -9,7 +9,7 @@ public class Library {
     /msg_format_error±msg
     /user_list±user1±user2±user3±....
     * */
-    public static final String DELIMITER = "±";
+    public static final String DELIMITER = "±†";
     public static final String AUTH_REQUEST = "/auth_request";
     public static final String AUTH_ACCEPT = "/auth_accept";
     public static final String AUTH_DENIED = "/auth_denied";
@@ -19,6 +19,7 @@ public class Library {
     // то есть сообщение, которое будет посылаться всем
     public static final String TYPE_BCAST_CLIENT = "/client_msg";
     public static final String USER_LIST = "/user_list";
+    public static final String NICKNAME_CHANGE = "/nick";
 
     public static String getTypeBcastClient(String msg) {
         return TYPE_BCAST_CLIENT + DELIMITER + msg;
@@ -47,6 +48,10 @@ public class Library {
     public static String getTypeBroadcast(String src, String message) {
         return TYPE_BROADCAST + DELIMITER + System.currentTimeMillis() +
                 DELIMITER + src + DELIMITER + message;
+    }
+
+    public static String getNickChange(String newNick) {
+        return NICKNAME_CHANGE + DELIMITER + newNick;
     }
 
 }
