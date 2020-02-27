@@ -36,4 +36,13 @@ public class SqlClient {
         return null;
     }
 
+    public static int setNickname(String newNickname, String oldNickname) {
+        String query = String.format("update users set nickname = '%s' where nickname = '%s'",
+                newNickname, oldNickname);
+        try {
+            return statement.executeUpdate(query);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
