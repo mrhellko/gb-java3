@@ -1,5 +1,6 @@
 package ru.gb.jt.chat.client;
 
+import org.apache.commons.io.input.ReversedLinesFileReader;
 import ru.gb.jt.chat.common.Library;
 import ru.gb.jt.network.SocketThread;
 import ru.gb.jt.network.SocketThreadListener;
@@ -8,21 +9,24 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
+import java.util.*;
+import java.util.List;
 
 public class ClientGUI extends JFrame implements ActionListener, Thread.UncaughtExceptionHandler, SocketThreadListener {
 
     private static final int WIDTH = 600;
     private static final int HEIGHT = 300;
 
+    private final boolean CENSORSHIP_ENABLED = true;
+    private final String CENSOR_TEXT = "-_-";
     private final JTextArea log = new JTextArea();
     private final JPanel panelTop = new JPanel(new GridLayout(2, 3));
-    private final JTextField tfIPAddress = new JTextField("95.84.209.91");
+    private final JTextField tfIPAddress = new JTextField("127.0.0.1");
     private final JTextField tfPort = new JTextField("8189");
     private final JCheckBox cbAlwaysOnTop = new JCheckBox("Always on top");
     private final JTextField tfLogin = new JTextField("ivan");
@@ -39,6 +43,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     private SocketThread socketThread;
     private final DateFormat DATE_FORMAT = new SimpleDateFormat("HH:mm:ss: ");
     private final String WINDOW_TITLE = "Chat";
+    private List<String> censorList;
 
     private ClientGUI() {
         Thread.setDefaultUncaughtExceptionHandler(this);
@@ -74,6 +79,24 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         add(panelBottom, BorderLayout.SOUTH);
 
         setVisible(true);
+    }
+
+    private void loadHistory() {
+        try (ReversedLinesFileReader fileReader = new ReversedLinesFileReader(new File(tfIPAddress.getText() + ".txt"), StandardCharsets.UTF_8)) {
+            int line = 0;
+            int maxHistory = 100;
+            List<String> history = new ArrayList<>();
+            while (line < maxHistory) {
+                String newString = fileReader.readLine();
+                if (newString == null) break;
+                history.add(newString);
+                line++;
+            }
+            Collections.reverse(history);
+            log.setText(String.join("\n", history) + "\n");
+        } catch (IOException e) {
+            System.out.println("log file not found");
+        }
     }
 
     private void connect() {
@@ -115,9 +138,9 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         if ("".equals(msg)) return;
         tfMessage.setText(null);
         tfMessage.requestFocusInWindow();
-        if(msg.startsWith("/nick")) {
+        if (msg.startsWith("/nick")) {
             String[] msgArr = msg.split(" ");
-            if(msgArr.length == 2) {
+            if (msgArr.length == 2) {
                 socketThread.sendMessage(Library.getNickChange(msgArr[1]));
             }
         } else {
@@ -127,13 +150,44 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
 
     private void putLog(String msg) {
         if ("".equals(msg)) return;
+        String finalMsg = (CENSORSHIP_ENABLED) ? censorship(msg) : msg;
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                log.append(msg + "\n");
+                log.append(finalMsg + "\n");
                 log.setCaretPosition(log.getDocument().getLength());
             }
         });
+        try (FileWriter fileWriter = new FileWriter(tfIPAddress.getText() + ".txt", true)) {
+            fileWriter.write(finalMsg + "\n");
+        } catch (IOException e) {
+            throw new RuntimeException("Problem with write file: ", e);
+        }
+    }
+
+    private String censorship(String msg) {
+        if (censorList == null) {
+            initCensorList();
+        }
+        String result = msg;
+        for(String badWord : censorList) {
+            if (msg.contains(badWord)) {
+                result = result.replace(badWord, CENSOR_TEXT);
+            }
+        }
+        return result;
+    }
+
+    private void initCensorList() {
+        censorList = new ArrayList<>();
+        try(BufferedReader reader = new BufferedReader(new FileReader("censorship.list"))) {
+            String line;
+            while((line = reader.readLine()) != null) {
+                censorList.add(line);
+            }
+        } catch (IOException e) {
+            System.out.println("censorship.list not found");
+        }
     }
 
     private void showException(Thread t, Throwable e) {
@@ -158,7 +212,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
 
     /**
      * Socket thread listener methods
-     * */
+     */
 
     @Override
     public void onSocketStart(SocketThread thread, Socket socket) {
@@ -180,7 +234,6 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         String login = tfLogin.getText();
         String password = new String(tfPassword.getPassword());
         thread.sendMessage(Library.getAuthRequest(login, password));
-
     }
 
     @Override
@@ -199,6 +252,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         switch (msgType) {
             case Library.AUTH_ACCEPT:
                 setTitle(WINDOW_TITLE + " entered with nickname: " + arr[1]);
+                loadHistory();
                 break;
             case Library.AUTH_DENIED:
                 putLog(msg);
