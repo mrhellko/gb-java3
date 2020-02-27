@@ -22,6 +22,8 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     private static final int WIDTH = 600;
     private static final int HEIGHT = 300;
 
+    private final boolean CENSORSHIP_ENABLED = true;
+    private final String CENSOR_TEXT = "-_-";
     private final JTextArea log = new JTextArea();
     private final JPanel panelTop = new JPanel(new GridLayout(2, 3));
     private final JTextField tfIPAddress = new JTextField("127.0.0.1");
@@ -41,6 +43,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     private SocketThread socketThread;
     private final DateFormat DATE_FORMAT = new SimpleDateFormat("HH:mm:ss: ");
     private final String WINDOW_TITLE = "Chat";
+    private List<String> censorList;
 
     private ClientGUI() {
         Thread.setDefaultUncaughtExceptionHandler(this);
@@ -147,17 +150,43 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
 
     private void putLog(String msg) {
         if ("".equals(msg)) return;
+        String finalMsg = (CENSORSHIP_ENABLED) ? censorship(msg) : msg;
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                log.append(msg + "\n");
+                log.append(finalMsg + "\n");
                 log.setCaretPosition(log.getDocument().getLength());
             }
         });
         try (FileWriter fileWriter = new FileWriter(tfIPAddress.getText() + ".txt", true)) {
-            fileWriter.write(msg + "\n");
+            fileWriter.write(finalMsg + "\n");
         } catch (IOException e) {
             throw new RuntimeException("Problem with write file: ", e);
+        }
+    }
+
+    private String censorship(String msg) {
+        if (censorList == null) {
+            initCensorList();
+        }
+        String result = msg;
+        for(String badWord : censorList) {
+            if (msg.contains(badWord)) {
+                result = result.replace(badWord, CENSOR_TEXT);
+            }
+        }
+        return result;
+    }
+
+    private void initCensorList() {
+        censorList = new ArrayList<>();
+        try(BufferedReader reader = new BufferedReader(new FileReader("censorship.list"))) {
+            String line;
+            while((line = reader.readLine()) != null) {
+                censorList.add(line);
+            }
+        } catch (IOException e) {
+            System.out.println("censorship.list not found");
         }
     }
 
